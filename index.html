@@ -1,0 +1,1191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>hyperiscool78 · Roblox Scripter</title>
+<meta name="description" content="Roblox scripter portfolio: rated matchmaking, team bots with behaviour trees, anti-dupe trading, session-locked saves, and the live game Wrong Delivery.">
+<meta property="og:title" content="hyperiscool78 · Roblox Scripter">
+<meta property="og:description" content="Rated matchmaking, team bots, anti-dupe trading and saves that survive a crash. Every system playtested in Studio.">
+<meta property="og:image" content="img/hero.jpg">
+<meta name="theme-color" content="#0a0b10">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb85c'/%3E%3Cstop offset='1' stop-color='%23ff8a3d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='21' font-family='monospace' font-size='12' font-weight='800' text-anchor='middle' fill='%231a1206'%3Eh78%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Night in Studio: a blue-black viewport on a faint build grid. Accent colours come from the game itself:
+   the Systems Wing's gold trim, the two team colours, and green for a passing run. */
+:root {
+  --bg: #0a0b10;
+  --bg2: #0e1017;
+  --surface: #13151d;
+  --surface2: #191c26;
+  --line: #242836;
+  --line2: #31364a;
+  --ink: #eef0f6;
+  --dim: #959cae;
+  --faint: #6a7288;
+  --gold: #ffb85c;
+  --gold2: #ffd38f;
+  --blue: #4da3ff;
+  --orange: #ff8a3d;
+  --green: #6ee7a0;
+  --red: #ff7a7a;
+  --violet: #b9a2ff;
+  --cyan: #8fe0ff;
+  --on-gold: #1a1206;
+  --display: "Bricolage Grotesque", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --body: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --ease: cubic-bezier(.2, .75, .2, 1);
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16.5px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: var(--bg); }
+/* the build grid, fading out below the hero */
+.backdrop { position: absolute; inset: 0 0 auto; height: 1300px; z-index: 0; pointer-events: none; overflow: hidden; }
+.grid-bg {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px; background-position: center top;
+  mask-image: radial-gradient(ellipse 75% 55% at 65% 5%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 65% 5%, #000 0%, transparent 75%);
+  opacity: .55;
+}
+.glow { position: absolute; z-index: 0; pointer-events: none; width: 760px; height: 760px; right: -180px; top: -260px; background: radial-gradient(circle, rgba(255, 184, 92, .13), transparent 62%); }
+.wrap { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.02em; }
+p { margin: 0; }
+img, video { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--surface2); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; }
+.eyebrow { font: 500 12px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); display: inline-flex; align-items: center; gap: 10px; }
+.eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--gold); }
+
+/* ---------------------------------------------------------------- top bar */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
+  margin-left: calc(-1 * var(--gutter-l)); margin-right: calc(-1 * var(--gutter-r));
+  padding: 12px var(--gutter-r) 12px var(--gutter-l);
+  background: rgba(10, 11, 16, .74); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid transparent; transition: border-color .3s;
+}
+.bar.scrolled { border-bottom-color: var(--line); }
+.bar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.mark { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 700 15px var(--display); letter-spacing: -.01em; }
+.mark i { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font: 800 11px var(--mono); font-style: normal; color: var(--on-gold); background: linear-gradient(135deg, var(--gold), var(--orange)); }
+.bar nav { display: flex; gap: 4px; }
+.bar nav a { text-decoration: none; color: var(--dim); font-size: 14px; padding: 6px 12px; border-radius: 999px; transition: color .2s, background .2s; }
+.bar nav a:hover, .bar nav a.on { color: var(--ink); background: var(--surface2); }
+.pill { display: inline-flex; align-items: center; gap: 8px; font: 500 12.5px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 10px; white-space: nowrap; text-decoration: none; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: ping 2.2s ease-out infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 160, .55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(110, 231, 160, 0); } }
+@media (max-width: 920px) { .bar nav { display: none; } }
+
+/* ---------------------------------------------------------------- hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 56px; align-items: center; padding-block: 76px 72px; }
+.hero h1 { font-size: clamp(42px, 6vw, 82px); font-weight: 800; line-height: .98; letter-spacing: -.035em; margin-top: 18px; }
+.hero h1 .hl { background: linear-gradient(100deg, var(--gold) 10%, var(--orange) 50%, var(--gold2) 90%); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: sheen 6s ease-in-out infinite; }
+@keyframes sheen { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.lede { color: var(--dim); font-size: clamp(17px, 1.5vw, 19px); max-width: 34em; margin-top: 22px; }
+.lede b { color: var(--ink); font-weight: 600; }
+.ids { display: flex; align-items: center; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+.handle { font: 500 14px var(--mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line); padding: 6px 11px; border-radius: 8px; }
+.handle span { color: var(--faint); }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; cursor: pointer; font: 600 15px var(--body); border-radius: 12px; padding: 13px 20px; border: 1px solid var(--line2); color: var(--ink); background: var(--surface); transition: transform .25s var(--ease), border-color .25s, box-shadow .25s; }
+.btn:hover { transform: translateY(-2px); border-color: var(--faint); }
+.btn.primary { background: var(--gold); color: var(--on-gold); border-color: var(--gold); box-shadow: 0 8px 30px -10px rgba(255, 184, 92, .6); }
+.btn.primary:hover { box-shadow: 0 14px 40px -10px rgba(255, 184, 92, .8); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+
+/* the viewport with live UI cards floating over it */
+.stage { position: relative; min-width: 0; }
+.viewport { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line2); background: var(--bg2); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .85), 0 0 0 6px rgba(255, 255, 255, .025); }
+.viewport .chrome { display: flex; align-items: center; gap: 6px; padding: 9px 12px; background: var(--surface); border-bottom: 1px solid var(--line); font: 500 11.5px var(--mono); color: var(--faint); white-space: nowrap; overflow: hidden; }
+.viewport .chrome i { width: 9px; height: 9px; border-radius: 50%; background: var(--line2); flex: none; }
+.viewport .chrome span { margin-left: 8px; overflow: hidden; text-overflow: ellipsis; }
+.viewport .chrome b { margin-left: auto; color: var(--green); font-weight: 500; }
+.viewport img { width: 100%; aspect-ratio: 1400 / 805; object-fit: cover; }
+.float {
+  position: absolute; z-index: 2; width: 236px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(19, 21, 29, .88); border: 1px solid var(--line2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 20px 40px -16px rgba(0, 0, 0, .75); font-size: 13px;
+  animation: bob 7s ease-in-out infinite;
+}
+.float .k { font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); display: flex; justify-content: space-between; gap: 8px; }
+.float .t { font: 700 16px var(--display); margin-top: 4px; }
+.float .s { color: var(--dim); font: 12px var(--mono); margin-top: 2px; }
+.f1 { left: -30px; top: 16%; animation-delay: -1s; }
+.f2 { right: -24px; top: 44%; width: 262px; animation-delay: -3.5s; }
+.f3 { left: 9%; bottom: -40px; width: 262px; animation-delay: -5s; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.f1 .t { color: var(--gold); }
+.teams { display: flex; gap: 5px; margin-top: 9px; }
+.teams span { flex: 1; height: 6px; border-radius: 3px; background: var(--blue); transition: opacity .3s; }
+.teams span.o { background: var(--orange); }
+.teams span.bot { opacity: .35; }
+.f2 .line { font: 12.5px var(--mono); margin-top: 6px; white-space: nowrap; overflow: hidden; }
+.f2 .line i { font-style: normal; color: var(--faint); }
+.f2 .role { color: var(--red); }
+.cursor::after { content: "▍"; color: var(--green); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.f3 .meter { height: 5px; border-radius: 3px; background: var(--line); margin-top: 9px; overflow: hidden; }
+.f3 .meter i { display: block; height: 100%; width: 100%; background: var(--green); transform-origin: left; }
+.f3 .t.done { color: var(--green); }
+
+/* ---------------------------------------------------------------- ticker */
+.ticker { position: relative; z-index: 1; margin-left: calc(-1 * var(--gutter-l)); margin-right: calc(-1 * var(--gutter-r)); border-block: 1px solid var(--line); background: var(--bg2); overflow: hidden; }
+.ticker .track { display: flex; width: max-content; animation: slide 48s linear infinite; }
+.ticker:hover .track { animation-play-state: paused; }
+.ticker ul { display: flex; margin: 0; padding: 14px 0; list-style: none; }
+.ticker li { font: 500 14px var(--mono); color: var(--dim); padding-inline: 22px; white-space: nowrap; display: flex; align-items: center; gap: 22px; }
+.ticker li::after { content: "◆"; font-size: 8px; color: var(--gold); }
+@keyframes slide { to { transform: translateX(-50%); } }
+
+/* ---------------------------------------------------------------- stats */
+.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-top: 64px; }
+.stats div { background: var(--bg); padding: 22px 20px; }
+.stats b { display: block; font: 800 clamp(30px, 3.4vw, 42px)/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stats b.g { color: var(--gold); }
+.stats span { display: block; color: var(--dim); font-size: 13.5px; margin-top: 8px; line-height: 1.45; }
+
+/* ---------------------------------------------------------------- section heads */
+section { padding-top: 120px; scroll-margin-top: 64px; }
+.shead { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 56px; align-items: end; margin-bottom: 44px; }
+.shead h2 { font-size: clamp(36px, 5vw, 62px); font-weight: 800; line-height: 1; letter-spacing: -.035em; margin-top: 14px; }
+.shead p { color: var(--dim); font-size: 17px; max-width: 36em; }
+
+/* ---------------------------------------------------------------- systems wing: pinned clip + scrolling chapters */
+.story { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 56px; align-items: start; }
+.pin { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); }
+.screen { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line2); background: var(--bg2); aspect-ratio: 1008 / 752; max-width: 100%; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .85); }
+.screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s var(--ease); }
+.screen video.on { opacity: 1; z-index: 1; }
+.hudtag { position: absolute; left: 12px; top: 12px; z-index: 3; pointer-events: none; font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; background: rgba(10, 11, 16, .8); border: 1px solid var(--line2); border-radius: 6px; padding: 4px 9px; display: flex; align-items: center; gap: 7px; }
+.hudtag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: blink 1.4s steps(1) infinite; }
+.chapters-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.chapters-nav button { all: unset; cursor: pointer; display: grid; gap: 8px; font: 500 12px var(--mono); color: var(--faint); letter-spacing: .04em; transition: color .3s; }
+.chapters-nav button i { display: block; height: 3px; border-radius: 2px; background: var(--line); position: relative; overflow: hidden; }
+.chapters-nav button i::after { content: ""; position: absolute; inset: 0; background: var(--gold); transform: scaleX(var(--p, 0)); transform-origin: left; }
+.chapters-nav button.on, .chapters-nav button:hover { color: var(--ink); }
+.chapters-nav button:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+
+.chapter { min-height: 80vh; padding-block: 8px 72px; display: flex; flex-direction: column; justify-content: center; opacity: .35; transition: opacity .5s var(--ease); min-width: 0; }
+.chapter.on { opacity: 1; }
+.chapter:last-child { padding-bottom: 8px; }
+.chapter .num { font: 500 12px var(--mono); color: var(--gold); letter-spacing: .14em; }
+.chapter h3 { font-size: clamp(28px, 3vw, 38px); font-weight: 700; line-height: 1.08; margin-top: 10px; }
+.chapter > p { color: var(--dim); margin-top: 14px; }
+.inline-clip { display: none; position: relative; margin-top: 18px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line2); background: var(--bg2); }
+.inline-clip video { width: 100%; aspect-ratio: 1008 / 752; object-fit: cover; }
+.pst { display: grid; gap: 12px; margin: 18px 0 0; }
+.pst div { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); gap: 12px; font-size: 15px; color: var(--dim); }
+.pst dt { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); padding-top: 3px; }
+.pst dt.warn { color: var(--gold); }
+.pst dd { margin: 0; }
+.pst dd b { color: var(--ink); font-weight: 600; }
+
+.panel { margin-top: 20px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.panel-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 12px; font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+.panel-h b { color: var(--ink); font-weight: 500; }
+.panel canvas { display: block; width: 100%; height: 128px; }
+.panel .foot { font: 12px var(--mono); color: var(--dim); margin-top: 6px; min-height: 1.5em; }
+.panel .foot b { color: var(--gold); font-weight: 500; }
+.ghost { font: 500 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); background: none; border: 1px solid var(--line2); border-radius: 6px; padding: 3px 8px; cursor: pointer; margin-left: 4px; }
+.ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+.phases { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; font: 500 12px var(--mono); }
+.phases span { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line2); color: var(--dim); transition: background .35s, border-color .35s, color .35s; }
+.phases span.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+
+.trace { font: 12.5px/1.8 var(--mono); }
+.trace div { display: grid; grid-template-columns: 4.4em 6.6em minmax(0, 1fr); gap: 10px; white-space: nowrap; }
+.trace div > span { overflow: hidden; text-overflow: ellipsis; }
+.trace .bot { color: var(--faint); }
+.trace .r-Hunter { color: var(--red); } .trace .r-Runner { color: var(--gold); } .trace .r-Collector { color: var(--cyan); } .trace .r-Escort { color: var(--violet); }
+.trace .path i { font-style: normal; color: var(--faint); }
+.trace .cur::after { content: "▍"; color: var(--green); animation: blink 1s steps(1) infinite; }
+
+.steps { list-style: none; margin: 18px 0 0; padding: 0; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); color: var(--faint); font-size: 14.5px; transition: color .4s; }
+.steps li:last-child { border-bottom: 1px solid var(--line); }
+.steps li::before { content: counter(s, decimal-leading-zero); font: 11.5px var(--mono); }
+.steps li b { font-weight: 600; }
+.steps li > span:last-child { font: 500 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line2); white-space: nowrap; transition: background .4s, border-color .4s, color .4s; }
+.steps li.lit { color: var(--ink); }
+.steps li.lit > .ok { color: #062012; background: var(--green); border-color: var(--green); }
+.steps li.lit > .no { color: #2a0808; background: var(--red); border-color: var(--red); }
+.steps li.lit > .wait { color: var(--on-gold); background: var(--gold); border-color: var(--gold); }
+
+details.code { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg2); overflow: hidden; }
+details.code summary { cursor: pointer; list-style: none; padding: 10px 14px; font: 500 12px var(--mono); color: var(--dim); display: flex; align-items: center; gap: 10px; }
+details.code summary::-webkit-details-marker { display: none; }
+details.code summary::before { content: "›"; display: inline-block; transition: transform .25s var(--ease); color: var(--gold); font-size: 16px; line-height: 1; }
+details.code[open] summary::before { transform: rotate(90deg); }
+details.code summary:hover { color: var(--ink); }
+pre { margin: 0; padding: 14px 16px 16px; border-top: 1px solid var(--line); font: 12.5px/1.6 var(--mono); color: var(--ink); overflow-x: auto; tab-size: 4; }
+pre.open { border: 1px solid var(--line); border-radius: 12px; background: var(--bg2); margin-top: 16px; }
+.tk-c { color: var(--faint); font-style: italic; } .tk-k { color: var(--violet); } .tk-s { color: var(--green); } .tk-n { color: var(--gold); } .tk-f { color: var(--cyan); }
+
+/* ---------------------------------------------------------------- skills bento */
+.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+.tile {
+  grid-column: span 2; position: relative; display: flex; flex-direction: column; gap: 10px; text-decoration: none; min-width: 0;
+  padding: 22px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); overflow: hidden;
+  transition: transform .35s var(--ease), border-color .35s;
+}
+.tile::before { content: ""; position: absolute; inset: 0; background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 184, 92, .10), transparent 45%); opacity: 0; transition: opacity .35s; pointer-events: none; }
+.tile:hover { transform: translateY(-3px); border-color: var(--line2); }
+.tile:hover::before { opacity: 1; }
+.tile.wide { grid-column: span 3; }
+.tile .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--surface2); border: 1px solid var(--line2); color: var(--gold); }
+.tile .ic svg { width: 19px; height: 19px; }
+.tile h3 { font-size: 20px; font-weight: 700; letter-spacing: -.015em; }
+.tile p { color: var(--dim); font-size: 14.5px; }
+.tile .go { margin-top: auto; padding-top: 6px; font: 500 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); display: inline-flex; gap: 6px; transition: color .25s; }
+.tile .go::after { content: "→"; transition: transform .25s var(--ease); }
+.tile:hover .go { color: var(--gold); }
+.tile:hover .go::after { transform: translateX(4px); }
+.new { font: 600 9.5px var(--mono); letter-spacing: .12em; color: var(--gold); border: 1px solid rgba(255, 184, 92, .5); border-radius: 4px; padding: 1px 5px; margin-left: 8px; vertical-align: 3px; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- wrong delivery */
+.banner { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--line2); min-height: 460px; display: flex; align-items: flex-end; background: var(--bg2); }
+.banner img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; transform: scale(1.08); transition: transform 1.8s var(--ease); }
+.banner.in img { transform: scale(1); }
+.banner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 11, 16, 0) 20%, rgba(10, 11, 16, .55) 52%, rgba(10, 11, 16, .96) 100%); }
+.banner .copy { position: relative; z-index: 1; padding: 36px; display: grid; gap: 14px; max-width: 780px; min-width: 0; }
+.banner h2 { font-size: clamp(42px, 6.5vw, 82px); font-weight: 800; line-height: .95; letter-spacing: -.04em; }
+.banner p { color: #c9cddb; font-size: 17px; max-width: 40em; }
+.banner .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+.chip { font: 500 12px var(--mono); color: var(--ink); background: rgba(19, 21, 29, .82); border: 1px solid var(--line2); border-radius: 999px; padding: 5px 11px; }
+
+.cases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.case { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 80px; }
+.case .pic { overflow: hidden; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.case .pic img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; transition: transform .9s var(--ease); }
+.case:hover .pic img { transform: scale(1.04); }
+.case .pic.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+.case .body { padding: 22px; display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.case h3 { font-size: 22px; font-weight: 700; }
+.case .body > p { color: var(--dim); font-size: 15px; margin-top: 6px; }
+.case.full { grid-column: 1 / -1; }
+.case.full .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.case.full .split .pic { border-bottom: 0; border-right: 1px solid var(--line); }
+.case.full .split .pic img { height: 100%; aspect-ratio: auto; min-height: 320px; }
+
+.flow { padding: 24px; background: var(--bg2); border-right: 1px solid var(--line); min-width: 0; }
+.flow-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.flow-h span:first-child { color: var(--gold); }
+.flow ol { list-style: none; margin: 0; padding: 0; counter-reset: f; position: relative; display: grid; gap: 16px; }
+.flow ol::before { content: ""; position: absolute; left: 13px; top: 14px; bottom: 14px; width: 1px; background: var(--line2); }
+.flow li { counter-increment: f; position: relative; padding-left: 42px; min-width: 0; }
+.flow li::before { content: counter(f); position: absolute; left: 0; top: -2px; width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center; font: 600 11.5px var(--mono); color: var(--dim); background: var(--surface); border: 1px solid var(--line2); transition: background .35s, color .35s, border-color .35s, box-shadow .35s; }
+.flow li b { font: 600 13.5px var(--mono); color: var(--ink); letter-spacing: .02em; }
+.flow li p { color: var(--dim); font-size: 14px; margin-top: 3px; }
+.flow li code { font-size: .82em; }
+.flow li.on::before { background: var(--gold); color: var(--on-gold); border-color: var(--gold); box-shadow: 0 0 0 5px rgba(255, 184, 92, .14); }
+.flow li.on b { color: var(--gold); }
+.parcels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.parcels div { padding: 10px 12px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--line); font: 500 13px var(--mono); color: var(--ink); transition: border-color .25s, background .25s, transform .25s var(--ease); min-width: 0; }
+.parcels div span { display: block; font: 12.5px/1.4 var(--body); color: var(--dim); margin-top: 4px; }
+.parcels div:hover { border-color: var(--gold); background: var(--surface); transform: translateY(-2px); }
+
+ul.ticks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+ul.ticks li { color: var(--dim); font-size: 15px; padding-left: 22px; position: relative; }
+ul.ticks li::before { content: ""; position: absolute; left: 2px; top: .5em; width: 9px; height: 5px; border-left: 2px solid var(--green); border-bottom: 2px solid var(--green); transform: rotate(-45deg); }
+ul.ticks li b { color: var(--ink); font-weight: 600; }
+
+/* ---------------------------------------------------------------- more from the gallery */
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.trio .case .pic img { aspect-ratio: 4 / 3; }
+.states { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font: 500 11.5px var(--mono); }
+.states span { padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line2); color: var(--dim); transition: background .35s, border-color .35s, color .35s; }
+.states span.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* ---------------------------------------------------------------- how I work */
+.qa { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.qa div { padding: 24px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--surface), var(--bg)); min-width: 0; }
+.qa .n { font: 500 12px var(--mono); color: var(--gold); }
+.qa h3 { font-size: 19px; font-weight: 700; margin-top: 12px; letter-spacing: -.01em; }
+.qa p { color: var(--dim); font-size: 15px; margin-top: 10px; }
+
+/* ---------------------------------------------------------------- contact */
+.contact { position: relative; border-radius: 24px; overflow: hidden; border: 1px solid var(--line2); padding: clamp(24px, 5vw, 64px); background: var(--surface); display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+.contact::before { content: ""; position: absolute; width: 640px; height: 640px; right: -200px; top: -280px; background: radial-gradient(circle, rgba(255, 184, 92, .2), transparent 60%); pointer-events: none; }
+.contact::after { content: ""; position: absolute; width: 520px; height: 520px; left: -220px; bottom: -300px; background: radial-gradient(circle, rgba(77, 163, 255, .15), transparent 60%); pointer-events: none; }
+.contact > * { position: relative; z-index: 1; min-width: 0; }
+.contact h2 { font-size: clamp(38px, 5.4vw, 68px); font-weight: 800; line-height: .98; letter-spacing: -.04em; margin-top: 14px; }
+.contact ol { margin: 12px 0 0; padding-left: 20px; color: var(--dim); display: grid; gap: 4px; }
+.cards { display: grid; gap: 12px; }
+.id { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 14px; background: rgba(10, 11, 16, .6); border: 1px solid var(--line2); flex-wrap: wrap; }
+.id > div { min-width: 0; }
+.id .l { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+.id .v { font: 700 21px var(--display); letter-spacing: -.01em; user-select: all; overflow-wrap: anywhere; }
+.id .v a { text-decoration: none; user-select: auto; }
+.id .v a:hover { color: var(--gold); }
+button.copy { font: 600 13px var(--body); color: var(--on-gold); background: var(--gold); border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; transition: transform .2s var(--ease); }
+button.copy:hover { transform: translateY(-1px); }
+
+footer { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; color: var(--faint); font-size: 13.5px; }
+
+/* ---------------------------------------------------------------- reveal */
+.js .rv { opacity: 0; transform: translateY(24px); transition: opacity .9s var(--ease), transform .9s var(--ease); transition-delay: var(--d, 0s); }
+.js .rv.in { opacity: 1; transform: none; }
+.js .rv-a { opacity: 0; transform: translateY(18px); animation: up 1s var(--ease) forwards; animation-delay: var(--d, 0s); }
+@keyframes up { to { opacity: 1; transform: none; } }
+.js.settled .rv-a { animation: none; opacity: 1; transform: none; }
+
+/* ---------------------------------------------------------------- responsive */
+@media (max-width: 1080px) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bento .tile, .bento .tile.wide { grid-column: span 3; }
+  .trio, .qa { grid-template-columns: 1fr 1fr; }
+  .parcels { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; padding-top: 44px; gap: 72px; }
+  .f1 { left: -6px; } .f2 { right: -6px; }
+  .story { grid-template-columns: 1fr; }
+  .pin { display: none; }
+  .chapter { min-height: 0; opacity: 1; padding-block: 0 64px; }
+  .inline-clip { display: block; }
+  .shead { grid-template-columns: 1fr; }
+  .contact { grid-template-columns: 1fr; }
+  .case.full .split { grid-template-columns: 1fr; }
+  .case.full .split .pic { border-right: 0; border-bottom: 1px solid var(--line); }
+  .case.full .split .pic img { min-height: 0; aspect-ratio: 16 / 9; }
+  .flow { border-right: 0; border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  section { padding-top: 88px; }
+  .hero { gap: 40px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stats div:last-child { grid-column: 1 / -1; }
+  .bento .tile, .bento .tile.wide { grid-column: 1 / -1; }
+  .cases, .trio, .qa { grid-template-columns: 1fr; }
+  .banner { min-height: 500px; }
+  .banner .copy { padding: 22px; }
+  .floats { display: grid; gap: 10px; margin-top: 12px; }
+  .float { position: relative; left: auto; right: auto; top: auto; bottom: auto; width: auto; animation: none; }
+  .f3 { display: none; }
+  .pst div { grid-template-columns: 1fr; gap: 2px; }
+  .trace { font-size: 11.5px; }
+  .trace div { grid-template-columns: 3.8em 5.8em minmax(0, 1fr); gap: 7px; }
+  .steps li { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .js .rv, .js .rv-a { opacity: 1; transform: none; }
+  .ticker .track { width: auto; }
+  .ticker ul[aria-hidden] { display: none; }
+  .ticker ul { flex-wrap: wrap; justify-content: center; row-gap: 4px; }
+  .banner img { transform: none; }
+  .chapter { opacity: 1; }
+}
+</style>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"><div class="grid-bg"></div><div class="glow"></div></div>
+
+<header class="bar" id="bar">
+  <div class="wrap">
+    <a class="mark" href="#top"><i>h78</i>hyperiscool78</a>
+    <nav aria-label="Sections">
+      <a href="#wing">Systems</a>
+      <a href="#skills">Skills</a>
+      <a href="#wrong-delivery">Wrong Delivery</a>
+      <a href="#more">Gallery</a>
+      <a href="#how">How I work</a>
+    </nav>
+    <a class="pill" href="#contact">Open for commissions</a>
+  </div>
+</header>
+
+<main class="wrap" id="top">
+  <div class="hero">
+    <div>
+      <span class="eyebrow rv-a" style="--d:.05s">Roblox scripter · Luau</span>
+      <h1 class="rv-a" style="--d:.15s">Systems that hold up when <span class="hl">real players</span> show up.</h1>
+      <p class="lede rv-a" style="--d:.3s">Rated matchmaking, bots that think as a team, trading that can't be duped, and saves that survive a crash. <b>Every system here was playtested in Studio before it counted as done.</b></p>
+      <div class="ids rv-a" style="--d:.4s"><span class="handle"><span>roblox </span>hyperiscool78</span><span class="handle"><span>discord </span>trovize_68679</span></div>
+      <div class="ctas rv-a" style="--d:.5s">
+        <a class="btn primary" href="#wing">See the systems
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10m0 0 4-4m-4 4L4 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="btn" href="https://www.roblox.com/games/99979241562684" target="_blank" rel="noopener">Play Wrong Delivery
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 11 11 5m0 0H6m5 0v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+
+    <div class="stage rv-a" style="--d:.35s">
+      <div class="viewport">
+        <div class="chrome"><i></i><i></i><i></i><span>Portfolio Gallery · Play</span><b>● running</b></div>
+        <img src="img/p/s_hall2.jpg" alt="The Portfolio Gallery in Roblox: a dark hall with exhibits on lit plinths, a fountain in the middle and the AI Lab doorway on the left" width="1400" height="805">
+      </div>
+      <div class="floats" aria-hidden="true">
+        <div class="float f1">
+          <div class="k"><span>Matchmaker</span><span data-f1-t>0:08</span></div>
+          <div class="t" data-f1-h>MATCH FOUND</div>
+          <div class="s" data-f1-r>rating 1000 · range ±420</div>
+          <div class="teams" data-f1-seats><span></span><span></span><span></span><span class="bot"></span><span class="o"></span><span class="o"></span><span class="o bot"></span><span class="o bot"></span></div>
+        </div>
+        <div class="float f2">
+          <div class="k"><span>Bot · Kit</span><span class="role">Hunter</span></div>
+          <div class="line" data-f2>Root <i>›</i> Hunt <i>›</i> Chase</div>
+        </div>
+        <div class="float f3">
+          <div class="k"><span>Trade · Pip</span><span data-f3-v>v5</span></div>
+          <div class="t" data-f3-t>Trade complete ✓</div>
+          <div class="s">you give 50 · Pip gives 35</div>
+          <div class="meter"><i data-f3-bar></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="ticker" aria-label="Skills">
+  <div class="track">
+    <ul><li>Rated matchmaking</li><li>Behaviour trees</li><li>Squad AI</li><li>Anti-dupe trading</li><li>Session-locked saves</li><li>PathfindingService</li><li>Vehicle physics</li><li>Game passes</li><li>--!strict Luau</li><li>Rojo + Git</li><li>Automated tests</li></ul>
+    <ul aria-hidden="true"><li>Rated matchmaking</li><li>Behaviour trees</li><li>Squad AI</li><li>Anti-dupe trading</li><li>Session-locked saves</li><li>PathfindingService</li><li>Vehicle physics</li><li>Game passes</li><li>--!strict Luau</li><li>Rojo + Git</li><li>Automated tests</li></ul>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="stats rv" aria-label="At a glance">
+    <div><b>1</b><span>published game, Wrong Delivery</span></div>
+    <div><b data-count="11814">11,814</b><span>lines of Luau in it, across 49 files</span></div>
+    <div><b data-count="5002">5,002</b><span>lines in the Systems Wing, 13 strict modules</span></div>
+    <div><b class="g" data-count="21">21</b><span>automated tests of the wing's rules, all passing</span></div>
+    <div><b data-count="18">18</b><span>game passes wired to Wrong Delivery's shop</span></div>
+  </div>
+
+  <!-- ============================================================ SYSTEMS WING -->
+  <section id="wing">
+    <div class="shead rv">
+      <div><span class="eyebrow">New · the Systems Wing</span><h2>Four systems studios hire for. One playable room.</h2></div>
+      <p>A room in the Portfolio Gallery that's a small 4v4 team game, Orb Rush. Queue up, get matched by rating, play a two-minute round against bots, win loot, then trade it. Every clip is real playtest footage.</p>
+    </div>
+
+    <div class="story">
+      <div class="pin">
+        <div class="screen" data-screen>
+          <span class="hudtag">Playtest</span>
+          <video data-ch="0" src="v/matchmaking.mp4" poster="v/matchmaking.jpg" muted loop playsinline preload="auto" aria-label="Queueing for Orb Rush: the search counts up, bots fill the empty seats, Match Found shows both teams, then the countdown and the arena"></video>
+          <video data-ch="1" src="v/bots.mp4" poster="v/bots.jpg" muted loop playsinline preload="metadata" aria-label="Following a Hunter bot; labels over each bot show its role and the behaviour-tree branch it is running"></video>
+          <video data-ch="2" src="v/trader.mp4" poster="v/trader.jpg" muted loop playsinline preload="metadata" aria-label="Talking to Pip: his greeting types out, the trade window opens, he counter-offers and accepts, the countdown runs and the trade completes"></video>
+          <video data-ch="3" src="v/results.mp4" poster="v/results.jpg" muted loop playsinline preload="metadata" aria-label="The results screen: score table, rating change and a Frost Crown loot card flipping in"></video>
+        </div>
+        <div class="chapters-nav" aria-label="Jump to a system">
+          <button type="button" data-go="0" class="on"><i></i>01 Matchmaking</button>
+          <button type="button" data-go="1"><i></i>02 Bots</button>
+          <button type="button" data-go="2"><i></i>03 Trader</button>
+          <button type="button" data-go="3"><i></i>04 Trading</button>
+        </div>
+      </div>
+
+      <div class="chapters">
+        <!-- 01 -->
+        <article class="chapter on" data-chapter="0" id="matchmaking">
+          <span class="num">01 / 04</span>
+          <h3>Rated matchmaking and the round loop</h3>
+          <div class="inline-clip"><video data-inline src="v/matchmaking.mp4" poster="v/matchmaking.jpg" muted loop playsinline preload="none" aria-label="Queueing for Orb Rush, Match Found, countdown and the arena"></video><span class="hudtag">Playtest</span></div>
+          <p>Fair matches when few people are online. Wait too long for a close rating and nobody plays; match anyone and new players get flattened.</p>
+          <dl class="pst">
+            <div><dt>Built</dt><dd>The search range starts at <b>±100</b> and widens <b>40 a second</b>. The longest-waiting player anchors it, the closest ratings go first, a snake draft balances the teams, and bots take empty seats after <b>8 s</b>. Ratings move by Elo.</dd></div>
+            <div><dt>Tested</dt><dd>Unit tests: a lone player gets bots, eight close players match at once into even teams, a far-off rating waits for the range to reach it, Elo moves by the size of the upset. Playtested from a solo queue through a full round to results.</dd></div>
+          </dl>
+          <div class="phases" data-cycle aria-label="Round phases in order"><span>Queue</span><span>Found</span><span>Countdown</span><span>Playing</span><span>Results</span></div>
+          <div class="panel" data-mm>
+            <div class="panel-h"><span>Live model of the queue</span><span>range <b data-mm-win>±100</b> · waited <b data-mm-t>0.0 s</b><button class="ghost" type="button" data-mm-replay>Replay</button></span></div>
+            <canvas width="560" height="128" aria-label="A rating line from 400 to 1600. Waiting players appear as dots; a bracket around you at 1000 widens each second and catches them. At 8 seconds bots fill the remaining seats."></canvas>
+            <div class="foot" data-mm-foot>You're the anchor, rating 1000.</div>
+          </div>
+        </article>
+
+        <!-- 02 -->
+        <article class="chapter" data-chapter="1" id="bots">
+          <span class="num">02 / 04</span>
+          <h3>Bots that think as a team</h3>
+          <div class="inline-clip"><video data-inline src="v/bots.mp4" poster="v/bots.jpg" muted loop playsinline preload="none" aria-label="Following a Hunter bot with live behaviour-tree labels"></video><span class="hudtag">Playtest</span></div>
+          <p>Seat-filling bots have to be worth playing against: not a pack chasing the same orb, and not frozen when plans change mid-chase.</p>
+          <dl class="pst">
+            <div><dt>Built</dt><dd>A reactive <b>behaviour tree</b> per bot, re-checked from the top 8 times a second, so a bump interrupts a chase at once and the cut-off action cleans up. Above them, a <b>squad director</b> hands out Hunter, Escort, Collector and Runner roles from the state of the match, but never sends the whole team hunting.</dd></div>
+            <div><dt>Tested</dt><dd>Unit tests for branch priority, interrupts and cooldowns. In playtests each bot's label showed its live branch, and tuning took a full round from about 100 points down to 29.</dd></div>
+          </dl>
+          <div class="panel">
+            <div class="panel-h"><span>What the bots are thinking</span><span>tick <b>0.125 s</b></span></div>
+            <div class="trace" data-trace aria-live="off"></div>
+          </div>
+          <details class="code"><summary>The tree, highest priority first</summary>
+<pre data-hl>BT.Selector("Root", {
+	BT.Sequence("Stunned", { IsStunned, Wobble }),
+	BT.Sequence("Deliver", { ShouldDeliver, RunHome }),
+	BT.Sequence("Hunt",    { IsHunter, CanBump, PickCarrier, Chase }),
+	BT.Sequence("Escort",  { IsEscort, FriendCarrying, Guard }),
+	BT.Sequence("Pounce",  { CarrierNearby, Cooldown(Bump, 2.5) }),
+	BT.Sequence("Collect", { ClaimOrb, Fetch }),
+	Roam,
+})</pre></details>
+        </article>
+
+        <!-- 03 -->
+        <article class="chapter" data-chapter="2" id="trader">
+          <span class="num">03 / 04</span>
+          <h3>Pip, an NPC who trades and haggles</h3>
+          <div class="inline-clip"><video data-inline src="v/trader.mp4" poster="v/trader.jpg" muted loop playsinline preload="none" aria-label="Trading with Pip: greeting, counter-offer, countdown, trade complete"></video><span class="hudtag">Playtest</span></div>
+          <p>An NPC trader is the easiest way to dupe a game, because NPC code usually skips the rules players follow.</p>
+          <dl class="pst">
+            <div><dt>Built</dt><dd>Pip is an ordinary trade party: <b>the same code path as a player</b>, so he can't do anything a player couldn't. He values offers by rarity, pays 50% more for what he's after this rotation, keeps a cut, and counters with cosmetics you don't own yet. Haggling odds fall each try and depend on his mood, and regulars get a better deal.</dd></div>
+            <div><dt>Tested</dt><dd>In a playtest he took 50 in shards and gave 35 back (his 30% cut), and refused a haggle. The first version offered a halo the player already owned; now he never offers a duplicate.</dd></div>
+          </dl>
+        </article>
+
+        <!-- 04 -->
+        <article class="chapter" data-chapter="3" id="trading">
+          <span class="num">04 / 04</span>
+          <h3>Inventory and trading you can't dupe</h3>
+          <div class="inline-clip"><video data-inline src="v/results.mp4" poster="v/results.jpg" muted loop playsinline preload="none" aria-label="Results screen with a loot card flipping in"></video><span class="hudtag">Playtest</span></div>
+          <p style="color:var(--dim);margin-top:14px">Stackable materials and serial-numbered unique items in a 48-slot bag, loot at the end of each round, and a two-sided trade window. Each classic dupe is closed off:</p>
+          <ol class="steps" data-steps>
+            <li><span>Both players accept offer <b>v4</b></span><span class="ok">accepted</span></li>
+            <li><span>One sneaks an item out: now <b>v5</b>, both accepts clear</span><span class="no">reset</span></li>
+            <li><span>A stale "accept v4" arrives late</span><span class="no">refused</span></li>
+            <li><span>Both accept <b>v5</b>; items lock to this trade</span><span class="wait">3 s</span></li>
+            <li><span>Checked again, swapped on copies, all or nothing</span><span class="ok">swapped</span></li>
+            <li><span>Trade id saved: the same commit can't land twice</span><span class="ok">saved</span></li>
+          </ol>
+          <dl class="pst">
+            <div><dt>Tested</dt><dd>9 of the 21 tests attack trading (6 more cover the bag): bait and switch, one item in two trades, spending promised materials, an item vanishing before the swap, overfilling a bag, hostile client offers. In a playtest a stale accept was refused, then the real one counted down and swapped with serials intact.</dd></div>
+            <div><dt>Also</dt><dd>Every request goes through a token bucket: 12 a second, bursts of 20.</dd></div>
+            <div><dt class="warn">Not yet</dt><dd>Saves use a session lock and migrations, but Studio has API access off, so they haven't run against a live DataStore. Player-to-Pip trades are playtested; two real players trading each other isn't yet.</dd></div>
+          </dl>
+          <details class="code"><summary>Accepting names the version you saw</summary>
+<pre data-hl>-- Any change to the offer bumps the version.
+if seenVersion ~= trade.version then
+	return false, "the offer changed, look again"
+end
+side.accepted = true
+if a.accepted and b.accepted then
+	trade.state = "Countdown"
+	trade.countdownEnds = now + TradeCore.Countdown
+end</pre></details>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SKILLS -->
+  <section id="skills">
+    <div class="shead rv">
+      <div><span class="eyebrow">What studios hire for</span><h2>Skills, each with proof.</h2></div>
+      <p>The skills Roblox studios ask for most in their scripter job posts. Each card jumps to the work on this page that shows it.</p>
+    </div>
+    <div class="bento">
+      <a class="tile wide rv" href="#matchmaking"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="6" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M2 16c.6-2.4 2.2-3.6 4-3.6s3.4 1.2 4 3.6m0 0c.6-2.4 2.2-3.6 4-3.6s3.4 1.2 4 3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><h3>Matchmaking and rounds<span class="new">NEW</span></h3><p>A rated queue that widens while you wait, balanced teams, bot backfill, a full round loop and Elo ratings.</p><span class="go">Matchmaking</span></a>
+      <a class="tile wide rv" style="--d:.06s" href="#bots"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="8" y="2" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="14" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="8" y="14" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="14" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/><path d="M10 6v4M4 14v-4h12v4M10 10v4" stroke="currentColor" stroke-width="1.6"/></svg></span><h3>NPC AI: behaviour trees<span class="new">NEW</span></h3><p>Reactive trees with interrupts, plus a squad director so bots hunt, escort and collect as a team.</p><span class="go">Bots</span></a>
+      <a class="tile rv" href="#trading"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 7h12m0 0-3-3m3 3-3 3M17 13H5m0 0 3-3m-3 3 3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Trading and inventory<span class="new">NEW</span></h3><p>Serial-numbered items, a trade window that can't be duped, and an NPC who haggles.</p><span class="go">Trading</span></a>
+      <a class="tile rv" style="--d:.06s" href="#saves"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="1.6"/></svg></span><h3>Saving data safely</h3><p>Session locks, versioned saves (v1 to v4 still load), retries, autosave and a save on shutdown.</p><span class="go">Saves</span></a>
+      <a class="tile rv" style="--d:.12s" href="#systems"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2 3 5v5c0 4 3 6.5 7 8 4-1.5 7-4 7-8V5l-7-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span><h3>Server authority</h3><p>Clients only ask. Every request is type-checked and rate-limited; the server works out prices and rewards itself.</p><span class="go">Game systems</span></a>
+      <a class="tile rv" href="#ai"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 10s2.6-5 7-5 7 5 7 5-2.6 5-7 5-7-5-7-5Z" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="10" r="2" fill="currentColor"/></svg></span><h3>Pathfinding and senses</h3><p>Sight cones, hearing, PathfindingService with costed zones, and recovery when an NPC gets stuck.</p><span class="go">AI lab</span></a>
+      <a class="tile rv" style="--d:.06s" href="#wrong-delivery"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 12V9l2-4h10l2 4v3H3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="6.5" cy="14.5" r="1.8" stroke="currentColor" stroke-width="1.6"/><circle cx="13.5" cy="14.5" r="1.8" stroke="currentColor" stroke-width="1.6"/></svg></span><h3>Vehicles and physics</h3><p>Custom car handling, engine wear, and forces that read the car's real velocity.</p><span class="go">Wrong Delivery</span></a>
+      <a class="tile rv" style="--d:.12s" href="#animation"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="4" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M10 6v6m0 0-3 5m3-5 3 5M5 8l5 1 5-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Animation and UI by code</h3><p>A keyframe player for character joints, and tweened HUDs drawn from the state the server sends.</p><span class="go">Animation</span></a>
+      <a class="tile wide rv" href="#wrong-delivery"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="5" width="15" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 8.5h15" stroke="currentColor" stroke-width="1.6"/><path d="M6 12h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><h3>Monetisation</h3><p>18 game passes, checked with Roblox when a player joins, granted when a purchase finishes, and nothing granted before the shop can deliver it.</p><span class="go">Wrong Delivery</span></a>
+      <a class="tile wide rv" style="--d:.06s" href="#how"><span class="ic"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m6 6-4 4 4 4m8-8 4 4-4 4M12 3 8 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h3>Typed, tested, in Git</h3><p>One ModuleScript per system, --!strict types, pure rule modules with automated tests, Studio-only test hooks, synced with Rojo and versioned in Git.</p><span class="go">How I work</span></a>
+    </div>
+  </section>
+
+  <!-- ============================================================ WRONG DELIVERY -->
+  <section id="wrong-delivery">
+    <div class="banner rv" data-banner>
+      <img src="img/hero.jpg" alt="Sunset over the Parcel Depot in Wrong Delivery's island town" width="1600" height="1006" loading="lazy">
+      <div class="copy">
+        <span class="eyebrow">Live on Roblox</span>
+        <h2>Wrong Delivery</h2>
+        <p>A published delivery-driving game on an island town about 7,000 by 7,000 studs. Pick up a parcel, read the clue, find the right house, and survive whatever the parcel does on the way.</p>
+        <div class="row">
+          <a class="btn primary" href="https://www.roblox.com/games/99979241562684" target="_blank" rel="noopener">Play it on Roblox
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 11 11 5m0 0H6m5 0v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <span class="chip">11,814 lines</span><span class="chip">49 files</span><span class="chip">18 game passes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cases">
+      <article class="case rv">
+        <div class="pic two"><img src="img/map.jpg" alt="The paper map open over the game, showing the street grid" loading="lazy"><img src="img/plan.jpg" alt="Plan of the island town's road network" loading="lazy"></div>
+        <div class="body">
+          <h3>DASH, a route-finding assistant</h3>
+          <p>Every road keeps its two real ends, so roads at different heights (the highway runs 26 studs up) join into a 3D graph. DASH plans from wherever you are, calls the turns and keeps quiet on straight crossings.</p>
+          <ul class="ticks"><li><b>Tested:</b> on a route with 12 crossings (8 straight), DASH made 6 turn calls plus the street call, and said nothing at the straight ones.</li></ul>
+        </div>
+      </article>
+      <article class="case rv" style="--d:.08s" id="saves">
+        <div class="pic"><img src="img/drive.jpg" alt="The player's car racing down a road at night leaving a glowing trail" loading="lazy"></div>
+        <div class="body">
+          <h3>Saves that survive server hops</h3>
+          <p>Each visit writes its own lock id when it loads, and only saves while it still holds the lock, so a quick server hop can't load stale data. Data that never loaded is never saved, so an outage can't wipe anyone. Failed loads retry while the player keeps playing.</p>
+          <details class="code"><summary>The lock check inside the save</summary>
+<pre data-hl>store:UpdateAsync(key(player), function(old)
+	if type(old) == "table" and heldByOther(old.Lock, session) then
+		lost = "other"
+		return nil -- leave the newer save alone
+	end
+	return data
+end)</pre></details>
+        </div>
+      </article>
+
+      <article class="case full rv">
+        <div class="split">
+          <div class="flow">
+            <div class="flow-h"><span>How the script works</span><span>ParcelService.luau · server</span></div>
+            <ol data-flow>
+              <li><b>Give</b><p>The server picks one of the 12 types. Every box looks the same, and the type never leaves the server, so a client can't peek or cheat its pay. Each type gets its own first-effect timer; Fragile and Bouncy wait for the first crash or bump instead.</p></li>
+              <li><b>Tick</b><p>One Heartbeat loop runs every parcel 10 times a second, each inside a <code>pcall</code>, so one broken parcel can't stop the rest.</p></li>
+              <li><b>Track the box</b><p>It's in your hands, on the passenger seat, lying loose or floating off. It moves to the seat when you drive and drops where you were if you die. It only counts as lost after half a second below the map, not one odd reading.</p></li>
+              <li><b>Read the car</b><p>It compares the car's velocity with the last tick. A big change is a bump; losing 18 studs/s of speed in one tick is a crash.</p></li>
+              <li><b>Run the effect</b><p>One branch per type: Fragile cuts the pay 20% per crash (down to a floor), Heavy slows the car's speed and steering, Magnetic adds a real force toward the nearest post or pole, found in a 100-stud grid built once at start.</p></li>
+              <li><b>Reveal</b><p>The first time an effect kicks in, DASH reacts out loud, the box gets its type's markings and the map shows its icon.</p></li>
+              <li><b>Pay at the door</b><p>The job's pay is multiplied by the parcel's factor: Fragile's cuts, plus a bonus if a Ticking parcel arrives early or a cut if it's late.</p></li>
+            </ol>
+          </div>
+          <div class="body">
+            <h3>Parcels with a mind of their own</h3>
+            <p>Twelve effects that touch the car, the HUD and DASH, all in one server module that owns the box, its effects and the pay factor. A Studio-only test hook picks up any type and skips straight to its effect, so each one can be checked in seconds.</p>
+            <div class="parcels" aria-label="The 12 parcel types">
+              <div>Plain<span>Nothing happens. Nobody tells you, though.</span></div>
+              <div>Ghost<span>Fades out; the door won't take it.</span></div>
+              <div>Fragile<span>Each hard crash cuts the pay.</span></div>
+              <div>Heavy<span>Slower car, wider turns.</span></div>
+              <div>Bouncy<span>A big bump throws it out.</span></div>
+              <div>Ticking<span>Early pays a bonus, late a cut.</span></div>
+              <div>Helium<span>Floats off. Catch it.</span></div>
+              <div>Magnetic<span>Pulls the car to lampposts.</span></div>
+              <div>Sleepy<span>The screen gets drowsy.</span></div>
+              <div>Mixed-up<span>DASH swaps left and right.</span></div>
+              <div>Teleporty<span>Jumps to a nearby spot.</span></div>
+              <div>Loud<span>Honks over DASH's voice.</span></div>
+            </div>
+            <details class="code"><summary>The loop, and how a crash is spotted</summary>
+<pre data-hl>-- One loop for every parcel, ten times a second
+RunService.Heartbeat:Connect(function(dt)
+	accumulator += dt
+	if accumulator < 0.1 then return end
+	local step = accumulator
+	accumulator = 0
+	local now = os.clock()
+	for _, p in parcels do
+		local ok, err = pcall(tick, p, now, step)
+		if not ok then warn("[ParcelService] " .. tostring(err)) end
+	end
+end)
+
+-- Inside tick: compare the car's velocity with the last tick
+local v = chassis.AssemblyLinearVelocity
+if last then
+	bump = (v - last).Magnitude >= P.BumpJolt
+	local flatV, flatLast = Vector3.new(v.X, 0, v.Z), Vector3.new(last.X, 0, last.Z)
+	crash = flatLast.Magnitude - flatV.Magnitude >= P.CrashJolt
+end</pre></details>
+          </div>
+        </div>
+      </article>
+
+      <article class="case rv">
+        <div class="pic"><img src="img/town.jpg" alt="Street views of the town with houses, roads and cars" loading="lazy"></div>
+        <div class="body">
+          <h3>Traffic and walkers that react</h3>
+          <ul class="ticks">
+            <li>Cars give way at crossings, overtake parked cars and honk at people in the road.</li>
+            <li>Walkers stop at kerbs, look for cars, step out of the way of one coming at them, and run if someone gets hit.</li>
+            <li><b>Stress test:</b> 16 cars dropped round one busy crossing for 60 seconds, and none got stuck.</li>
+          </ul>
+        </div>
+      </article>
+      <article class="case rv" style="--d:.08s">
+        <div class="body">
+          <span class="eyebrow">From the Magnetic parcel</span>
+          <h3 style="margin-top:10px">A force, not a teleport</h3>
+          <p>Pull the car toward the nearest lamppost, stronger the closer it is. Right on top of it the direction is undefined, so there's no pull rather than a NaN force.</p>
+<pre class="open" data-hl>local offset = Vector3.new(target.X - chassis.Position.X, 0, target.Z - chassis.Position.Z)
+local strength = 1 - offset.Magnitude / P.MagnetRange
+magnet.Force = if offset.Magnitude > 0.5
+	then offset.Unit * chassis.AssemblyMass * P.MagnetPull * strength
+	else Vector3.zero</pre>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================ MORE FROM THE GALLERY -->
+  <section id="more">
+    <div class="shead rv">
+      <div><span class="eyebrow">Portfolio Gallery</span><h2>More from the gallery.</h2></div>
+      <p>The gallery is a small game in its own right. The server decides every coin, purchase and quest, and the host who greets you is animated entirely from code.</p>
+    </div>
+    <div class="trio">
+      <article class="case rv" id="ai">
+        <div class="pic"><img src="img/p/s_ailab.jpg" alt="Two Seeker robots chasing near the lab door, with path dots on the floor" loading="lazy" width="1400" height="1052"></div>
+        <div class="body">
+          <h3>Seekers: AI with senses</h3>
+          <div class="states" data-cycle aria-label="Seeker states in order"><span>Patrol</span><span>Investigate</span><span>Chase</span><span>Tagged</span><span>Return</span></div>
+          <ul class="ticks">
+            <li>A 110° sight cone to 48 studs, raycast so cover really hides you; running is heard within 30.</li>
+            <li>After 2.5 s out of sight, a chase becomes a search of where you were last seen.</li>
+            <li>A bot stuck for 1.5 s re-plans; stuck again, it gives up that goal.</li>
+            <li><b>Tested:</b> both patrolled, chased and tagged in a playtest. One got stuck on a wall, which is why the unstick exists.</li>
+          </ul>
+          <details class="code"><summary>Can this Seeker see you?</summary>
+<pre data-hl>local function canSee(root, target, ignore)
+	local to = target.Position - root.Position
+	if to.Magnitude > SIGHT_RANGE then return false end
+	if to.Magnitude > 6 and root.CFrame.LookVector:Dot(to.Unit) < math.cos(FOV / 2) then
+		return false
+	end
+	rayParams.FilterDescendantsInstances = ignore
+	local hit = workspace:Raycast(root.Position + Vector3.new(0, 0.8, 0), to, rayParams)
+	return hit == nil or hit.Instance:IsDescendantOf(target.Parent)
+end</pre></details>
+        </div>
+      </article>
+      <article class="case rv" style="--d:.08s" id="systems">
+        <div class="pic"><img src="img/p/s_quests.jpg" alt="The Quests panel: five quests with progress bars, two marked Done" loading="lazy" width="1400" height="1052"></div>
+        <div class="body">
+          <h3>Economy, quests and shop</h3>
+          <ul class="ticks">
+            <li>A chest on a 30 s per-player cooldown, five quests and a 20-hour daily reward.</li>
+            <li>A shop of 8 cosmetics priced by the server; pets on AlignPosition; a top-8 leaderboard from an OrderedDataStore.</li>
+            <li><b>Tested:</b> bad input on purpose (wrong types, unknown items, spam), all refused.</li>
+          </ul>
+          <details class="code"><summary>Every request comes through here</summary>
+<pre data-hl>Request.OnServerInvoke = function(player, action, arg)
+	local now = os.clock()
+	if (lastRequest[player] or 0) > now - 0.15 then
+		return false, "Slow down"
+	end
+	lastRequest[player] = now
+	local p = profiles[player]
+	local h = type(action) == "string" and handlers[action]
+	if not (p and h) then
+		return false, "Not ready"
+	end
+	return h(player, p, arg)
+end</pre></details>
+        </div>
+      </article>
+      <article class="case rv" style="--d:.16s" id="animation">
+        <div class="pic"><img src="img/p/s_dance.jpg" alt="The gallery host mid-jump with arms raised after a quest is finished" loading="lazy" width="1400" height="1052"></div>
+        <div class="body">
+          <h3>Animation from code</h3>
+          <ul class="ticks">
+            <li>A keyframe player drives all 15 joints, with eased blends between keys, so the place needs no uploaded animations.</li>
+            <li>A breathing idle with a head that follows you, a wave that greets you by name, a victory dance when a quest is done.</li>
+            <li>It writes each joint's C0, never Transform, so it never fights the Animator.</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================ HOW I WORK -->
+  <section id="how">
+    <div class="shead rv">
+      <div><span class="eyebrow">The questions hirers ask</span><h2>How I work.</h2></div>
+      <p>Studios check the same few things before they hire a scripter. Short answers, backed by the code above.</p>
+    </div>
+    <div class="qa">
+      <div class="rv"><span class="n">01</span><h3>Server or client?</h3><p>Anything worth something runs on the server: money, items, trades, ratings, cooldowns, damage. The client handles input, the camera, UI and whatever must feel instant.</p></div>
+      <div class="rv" style="--d:.06s"><span class="n">02</span><h3>Validating a purchase or trade</h3><p>The client sends ids, nothing else. The server checks they exist, reads prices from its own config, checks balance and ownership, then grants. Trades also check the version each side accepted.</p></div>
+      <div class="rv" style="--d:.12s"><span class="n">03</span><h3>Not losing data</h3><p>UpdateAsync with retries, autosave and BindToClose. A session lock stops two servers writing the same save, and data that never loaded is never saved.</p></div>
+      <div class="rv"><span class="n">04</span><h3>Structure</h3><p>Pure rule modules with tests (inventory, trades, matchmaking, behaviour trees), services that own their state, tunables in config, all strictly typed, in Rojo and Git.</p></div>
+      <div class="rv" style="--d:.06s"><span class="n">05</span><h3>Testing</h3><p>Automated tests for the rules, then a Studio playtest of every feature, fixing what breaks. Studio-only hooks force a match, end it or drive a trade in seconds.</p></div>
+      <div class="rv" style="--d:.12s"><span class="n">06</span><h3>Handoff</h3><p>Every file opens by saying what it owns, plus setup notes and a list of anything unfinished, so another scripter can pick it up.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ CONTACT -->
+  <section id="contact">
+    <div class="contact rv">
+      <div>
+        <span class="eyebrow">Open for commissions</span>
+        <h2>Let's build your game's systems.</h2>
+        <p class="lede">Message me on Discord with:</p>
+        <ol><li>what you need built or fixed,</li><li>a link to the game, if it has one,</li><li>your deadline and budget.</li></ol>
+        <p class="lede" style="margin-top:12px">I'll reply with a price and how long it will take.</p>
+      </div>
+      <div class="cards">
+        <div class="id"><div><div class="l">Discord</div><div class="v" id="discord-name">trovize_68679</div></div><button class="copy" type="button" data-copy="discord-name">Copy</button></div>
+        <div class="id"><div><div class="l">Roblox</div><div class="v" id="roblox-name">hyperiscool78</div></div><button class="copy" type="button" data-copy="roblox-name">Copy</button></div>
+        <div class="id"><div><div class="l">Live game</div><div class="v"><a href="https://www.roblox.com/games/99979241562684" target="_blank" rel="noopener">Wrong Delivery ↗</a></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>hyperiscool78 · 2026</span>
+    <span>Every system was playtested in Studio. Pictures and clips are Studio captures.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var io = "IntersectionObserver" in window;
+  var root = document.documentElement;
+  if (io) root.classList.add("js");
+  // the hero must never stay hidden if animations are paused (a background tab, a thumbnail)
+  setTimeout(function () { root.classList.add("settled"); }, 1800);
+  var css = getComputedStyle(root);
+  function v(n) { return css.getPropertyValue(n).trim(); }
+
+  function onView(el, fn, threshold) {
+    if (!io) { fn(); return; }
+    var ob = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { ob.disconnect(); fn(); } });
+    }, { threshold: threshold || 0.2 });
+    ob.observe(el);
+  }
+
+  /* ---- top bar: border once scrolled, highlight the section in view ---- */
+  var bar = document.getElementById("bar");
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll(".bar nav a"));
+  var navSecs = navLinks.map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); });
+  var contact = document.getElementById("contact");
+  var ticking = false;
+  function onScroll() {
+    ticking = false;
+    bar.classList.toggle("scrolled", window.scrollY > 8);
+    var line = window.innerHeight * 0.4, on = -1;
+    navSecs.forEach(function (sec, i) { if (sec && sec.getBoundingClientRect().top <= line) on = i; });
+    if (contact.getBoundingClientRect().top <= line) on = -1;
+    navLinks.forEach(function (a, i) { a.classList.toggle("on", i === on); });
+  }
+  window.addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
+  onScroll();
+
+  /* ---- copy buttons ---- */
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = document.getElementById(btn.dataset.copy);
+      var text = el.textContent.trim();
+      function selectIt() {
+        var r = document.createRange(); r.selectNodeContents(el);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = "Selected";
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { btn.textContent = "Copied"; }, selectIt);
+        } else selectIt();
+      } catch (e) { selectIt(); }
+      setTimeout(function () { btn.textContent = "Copy"; }, 1800);
+    });
+  });
+
+  /* ---- Luau highlighting ---- */
+  var KW = /^(local|function|end|if|then|else|elseif|return|for|in|do|while|and|or|not|nil|true|false)$/;
+  document.querySelectorAll("pre[data-hl]").forEach(function (pre) {
+    var src = pre.textContent, out = "", m;
+    var re = /(--[^\n]*)|("(?:[^"\\]|\\.)*")|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)(\s*\()?|([\s\S])/g;
+    function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    while ((m = re.exec(src))) {
+      if (m[1]) out += '<span class="tk-c">' + esc(m[1]) + "</span>";
+      else if (m[2]) out += '<span class="tk-s">' + esc(m[2]) + "</span>";
+      else if (m[3]) out += '<span class="tk-n">' + m[3] + "</span>";
+      else if (m[4]) {
+        if (KW.test(m[4])) out += '<span class="tk-k">' + m[4] + "</span>" + (m[5] || "");
+        else if (m[5]) out += '<span class="tk-f">' + m[4] + "</span>" + m[5];
+        else out += m[4];
+      } else out += esc(m[6]);
+    }
+    pre.innerHTML = out;
+  });
+
+  /* ---- reveals ---- */
+  document.querySelectorAll(".rv").forEach(function (el) { onView(el, function () { el.classList.add("in"); }, 0.12); });
+  var banner = document.querySelector("[data-banner]");
+  if (banner) onView(banner, function () { banner.classList.add("in"); }, 0.2);
+
+  /* ---- bento: glow follows the pointer ---- */
+  if (!reduce) document.querySelectorAll(".tile").forEach(function (t) {
+    t.addEventListener("pointermove", function (e) {
+      var r = t.getBoundingClientRect();
+      t.style.setProperty("--mx", (e.clientX - r.left) + "px");
+      t.style.setProperty("--my", (e.clientY - r.top) + "px");
+    });
+  });
+
+  /* ---- counters ---- */
+  document.querySelectorAll("[data-count]").forEach(function (el) {
+    var to = +el.dataset.count;
+    if (reduce) return;
+    el.textContent = "0";
+    onView(el, function () {
+      var t0 = performance.now(), dur = 1600;
+      setTimeout(function () { el.textContent = to.toLocaleString("en-GB"); }, dur + 300); // lands even if frames are throttled
+      (function step(t) {
+        var k = Math.min(1, Math.max(0, (t - t0) / dur)), e = 1 - Math.pow(1 - k, 4);
+        el.textContent = Math.round(to * e).toLocaleString("en-GB");
+        if (k < 1) requestAnimationFrame(step);
+      })(t0);
+    }, 0.6);
+  });
+
+  /* ---- hero cards: the queue fills, a bot re-plans, a trade counts down ---- */
+  if (!reduce) (function () {
+    var f1t = document.querySelector("[data-f1-t]"), f1h = document.querySelector("[data-f1-h]"), f1r = document.querySelector("[data-f1-r]");
+    var seats = document.querySelectorAll("[data-f1-seats] span");
+    var humans = [0, 4, 1, 5, 2];  // seats taken by players as the range widens; the rest go to bots at 8 s
+    var s = -1;
+    function queue() {
+      s = (s + 1) % 12;
+      var t = Math.min(s, 8);
+      f1t.textContent = "0:0" + t;
+      f1r.textContent = "rating 1000 · range ±" + (100 + 40 * t);
+      f1h.textContent = s >= 8 ? "MATCH FOUND" : "Searching…";
+      var shown = s >= 8 ? 8 : Math.min(humans.length, 1 + Math.floor(s / 1.8));
+      seats.forEach(function (el, i) {
+        var isHuman = humans.indexOf(i) !== -1 && humans.indexOf(i) < shown;
+        el.style.opacity = s >= 8 ? (humans.indexOf(i) !== -1 ? 1 : .35) : (isHuman ? 1 : .1);
+      });
+    }
+    queue(); setInterval(queue, 900);
+
+    var f2 = document.querySelector("[data-f2]");
+    var paths = [["Hunt", "Chase"], ["Stunned", "Wobble"], ["Collect", "ClaimOrb"], ["Collect", "Fetch"], ["Deliver", "RunHome"], ["Pounce", "Bump"]];
+    var pi = 0;
+    function typePath() {
+      var p = paths[pi++ % paths.length], full = "Root › " + p.join(" › "), k = 0;
+      f2.classList.add("cursor");
+      var iv = setInterval(function () {
+        k += 1; f2.textContent = full.slice(0, k);
+        if (k >= full.length) { clearInterval(iv); f2.innerHTML = "Root <i>›</i> " + p.join(" <i>›</i> "); f2.classList.remove("cursor"); }
+      }, 36);
+    }
+    setInterval(typePath, 2600);
+
+    var bar3 = document.querySelector("[data-f3-bar]"), t3 = document.querySelector("[data-f3-t]"), v3 = document.querySelector("[data-f3-v]");
+    var version = 5;
+    function trade() {
+      var left = 3;
+      t3.classList.remove("done");
+      v3.textContent = "v" + version;
+      t3.textContent = "Both accepted · 3…";
+      bar3.style.transition = "none"; bar3.style.transform = "scaleX(1)";
+      requestAnimationFrame(function () { requestAnimationFrame(function () { bar3.style.transition = "transform 3s linear"; bar3.style.transform = "scaleX(0)"; }); });
+      var iv = setInterval(function () {
+        left--;
+        if (left > 0) t3.textContent = "Both accepted · " + left + "…";
+        else { clearInterval(iv); t3.textContent = "Trade complete ✓"; t3.classList.add("done"); bar3.style.transition = "none"; bar3.style.transform = "scaleX(1)"; version++; }
+      }, 1000);
+    }
+    trade(); setInterval(trade, 6000);
+  })();
+
+  /* ---- cycling state strips ---- */
+  document.querySelectorAll("[data-cycle]").forEach(function (strip) {
+    var items = strip.querySelectorAll("span");
+    if (reduce) return;
+    onView(strip, function () {
+      var i = 0;
+      setInterval(function () { items.forEach(function (s, j) { s.classList.toggle("on", j === i); }); i = (i + 1) % items.length; }, 1100);
+    }, 0.6);
+  });
+
+  /* ---- systems wing: the pinned clip follows the chapter in view ---- */
+  (function () {
+    var vids = document.querySelectorAll("[data-screen] video");
+    var navBtns = document.querySelectorAll(".chapters-nav button");
+    var chapters = document.querySelectorAll("[data-chapter]");
+    var pin = document.querySelector(".pin");
+    function pinShown() { return pin && getComputedStyle(pin).display !== "none"; }
+    var current = -1, screenVisible = false;
+    function play(vd) { var p = vd.play(); if (p && p.catch) p.catch(function () { vd.controls = true; }); }
+    function setActive(i) {
+      if (i === current) return;
+      current = i;
+      vids.forEach(function (vd, j) {
+        vd.classList.toggle("on", j === i);
+        if (j === i) { if (!reduce && screenVisible && pinShown()) { try { vd.currentTime = 0; } catch (e) {} play(vd); } }
+        else vd.pause();
+      });
+      navBtns.forEach(function (b, j) { b.classList.toggle("on", j === i); if (j === i) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); });
+      chapters.forEach(function (c, j) { c.classList.toggle("on", j === i); });
+    }
+    setActive(0);
+    if (reduce) vids.forEach(function (vd) { vd.controls = true; });
+    navBtns.forEach(function (b) {
+      b.addEventListener("click", function () { chapters[+b.dataset.go].scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" }); });
+    });
+    if (!io) return;
+    var chOb = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) setActive(+e.target.dataset.chapter); });
+    }, { rootMargin: "-45% 0px -45% 0px" });
+    chapters.forEach(function (c) { chOb.observe(c); });
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        screenVisible = e.isIntersecting;
+        var vd = vids[current];
+        if (!vd || reduce) return;
+        if (screenVisible && pinShown()) play(vd); else vd.pause();
+      });
+    }, { threshold: 0.3 }).observe(document.querySelector("[data-screen]"));
+    // a progress line under each chapter button
+    if (!reduce) (function tick() {
+      navBtns.forEach(function (b, j) {
+        var p = j < current ? 1 : 0;
+        if (j === current) { var vd = vids[j]; p = vd.duration ? vd.currentTime / vd.duration : 0; }
+        b.querySelector("i").style.setProperty("--p", p.toFixed(3));
+      });
+      requestAnimationFrame(tick);
+    })();
+    // on a phone each chapter carries its own clip
+    document.querySelectorAll("video[data-inline]").forEach(function (vd) {
+      if (reduce) { vd.controls = true; vd.preload = "metadata"; return; }
+      new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          if (pinShown()) { vd.pause(); return; }
+          if (e.isIntersecting) play(vd); else vd.pause();
+        });
+      }, { threshold: 0.4 }).observe(vd);
+    });
+  })();
+
+  /* ---- queue model: the game's numbers (±100, +40/s, bots after 8 s, 4v4) ---- */
+  var mm = document.querySelector("[data-mm]");
+  if (mm) (function () {
+    var cv = mm.querySelector("canvas"), cx = cv.getContext("2d");
+    var winEl = mm.querySelector("[data-mm-win]"), tEl = mm.querySelector("[data-mm-t]"), foot = mm.querySelector("[data-mm-foot]");
+    var LO = 400, HI = 1600, ANCHOR = 1000, BASE = 100, WIDEN = 40, MAXW = 800, FILL = 8, SEATS = 8;
+    var others = [985, 1060, 905, 1530, 1180, 1290, 470];
+    var C = { ink: v("--ink"), faint: v("--faint"), line: v("--line2"), gold: v("--gold"), green: v("--green") };
+    var start = 0, raf = 0, dpr = Math.min(2, window.devicePixelRatio || 1);
+    function size() { var w = cv.clientWidth || 560; cv.width = w * dpr; cv.height = 128 * dpr; }
+    function draw(t) {
+      var W = cv.width / dpr, pad = 18, y = 62;
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cx.clearRect(0, 0, W, 128);
+      function X(r) { return pad + (r - LO) / (HI - LO) * (W - pad * 2); }
+      var win = Math.min(MAXW, BASE + WIDEN * Math.min(t, FILL)), found = t >= FILL;
+      cx.strokeStyle = C.line; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(X(LO), y); cx.lineTo(X(HI), y); cx.stroke();
+      cx.fillStyle = C.faint; cx.font = "11px 'JetBrains Mono', monospace"; cx.textAlign = "center";
+      for (var r = LO; r <= HI; r += 200) { cx.fillRect(X(r), y - 3, 1, 6); cx.fillText(r, X(r), y + 24); }
+      var a = X(Math.max(LO, ANCHOR - win)), b = X(Math.min(HI, ANCHOR + win));
+      var g = cx.createLinearGradient(a, 0, b, 0);
+      g.addColorStop(0, "rgba(255,184,92,0.04)"); g.addColorStop(.5, "rgba(255,184,92,0.17)"); g.addColorStop(1, "rgba(255,184,92,0.04)");
+      cx.fillStyle = g; cx.fillRect(a, y - 26, b - a, 52);
+      cx.strokeStyle = C.gold; cx.lineWidth = 1.5;
+      cx.beginPath(); cx.moveTo(a + 7, y - 26); cx.lineTo(a, y - 26); cx.lineTo(a, y + 26); cx.lineTo(a + 7, y + 26); cx.stroke();
+      cx.beginPath(); cx.moveTo(b - 7, y - 26); cx.lineTo(b, y - 26); cx.lineTo(b, y + 26); cx.lineTo(b - 7, y + 26); cx.stroke();
+      var caught = 0;
+      others.forEach(function (r, i) {
+        var arrive = i * 0.6; if (t < arrive) return;
+        var inn = Math.abs(r - ANCHOR) <= win; if (inn) caught++;
+        var yy = y - 12 + (i % 3) * 12;
+        cx.globalAlpha = Math.min(1, (t - arrive) * 3);
+        if (inn) { cx.beginPath(); cx.arc(X(r), yy, 9, 0, Math.PI * 2); cx.fillStyle = "rgba(110,231,160,0.16)"; cx.fill(); }
+        cx.beginPath(); cx.arc(X(r), yy, inn ? 5 : 4, 0, Math.PI * 2); cx.fillStyle = inn ? C.green : C.faint; cx.fill();
+        cx.globalAlpha = 1;
+      });
+      cx.beginPath(); cx.arc(X(ANCHOR), y, 7, 0, Math.PI * 2); cx.fillStyle = C.gold; cx.fill();
+      cx.fillStyle = C.ink; cx.font = "600 11px 'JetBrains Mono', monospace"; cx.fillText("YOU", X(ANCHOR), y - 34);
+      var humans = Math.min(SEATS - 1, caught) + 1;
+      winEl.textContent = "±" + Math.round(win);
+      tEl.textContent = Math.min(t, FILL).toFixed(1) + " s";
+      if (found) foot.innerHTML = "<b>Match found</b> · " + humans + " players within ±" + Math.round(win) + ", " + (SEATS - humans) + " bots · snake draft into 4 v 4";
+      else foot.textContent = humans + " of " + SEATS + " seats · range widens 40 a second";
+      return found;
+    }
+    function run() {
+      cancelAnimationFrame(raf); size(); start = performance.now();
+      if (reduce) { draw(FILL); return; }
+      (function step(now) { if (!draw(Math.max(0, (now - start) / 1000))) raf = requestAnimationFrame(step); })(start);
+    }
+    size(); draw(reduce ? FILL : 0);
+    onView(mm, run, 0.5);
+    mm.querySelector("[data-mm-replay]").addEventListener("click", run);
+    window.addEventListener("resize", function () { size(); draw(reduce ? FILL : Math.min(FILL, (performance.now() - start) / 1000)); });
+  })();
+
+  /* ---- bot thinking trace: real branch paths, as the in-game labels show them ---- */
+  var tr = document.querySelector("[data-trace]");
+  if (tr) (function () {
+    var bots = [
+      ["Kit", "Hunter", [["Hunt", "Chase"], ["Stunned", "Wobble"], ["Hunt", "Chase"], ["Pounce", "Bump"]]],
+      ["Zed", "Runner", [["Collect", "Fetch"], ["Collect", "Fetch"], ["Deliver", "RunHome"], ["Collect", "ClaimOrb"]]],
+      ["Orbit", "Collector", [["Collect", "ClaimOrb"], ["Collect", "Fetch"], ["Deliver", "RunHome"], ["Collect", "Fetch"]]],
+      ["Juno", "Escort", [["Escort", "Guard"], ["Pounce", "Bump"], ["Escort", "Guard"], ["Roam"]]],
+      ["Nova", "Runner", [["Deliver", "RunHome"], ["Collect", "Fetch"], ["Collect", "Fetch"], ["Deliver", "RunHome"]]]
+    ];
+    var rows = bots.map(function (b) {
+      var d = document.createElement("div");
+      d.innerHTML = '<span class="bot"></span><span></span><span class="path"></span>';
+      d.children[0].textContent = b[0];
+      d.children[1].textContent = b[1].toUpperCase();
+      d.children[1].className = "r-" + b[1];
+      tr.appendChild(d);
+      return d.children[2];
+    });
+    function html(p) { return "Root <i>›</i> " + p.join(" <i>›</i> "); }
+    bots.forEach(function (b, i) { rows[i].innerHTML = html(b[2][0]); });
+    if (reduce) return;
+    var step = 0;
+    onView(tr, function () {
+      setInterval(function () {
+        step++;
+        var i = step % bots.length, k = Math.floor(step / bots.length) + 1;
+        var p = bots[i][2][k % bots[i][2].length], full = "Root › " + p.join(" › "), n = 0;
+        rows.forEach(function (r) { r.classList.remove("cur"); });
+        rows[i].classList.add("cur");
+        var typer = setInterval(function () {
+          n += 2; rows[i].textContent = full.slice(0, n);
+          if (n >= full.length) { clearInterval(typer); rows[i].innerHTML = html(p); }
+        }, 28);
+      }, 1300);
+    }, 0.4);
+  })();
+
+  /* ---- parcel script: the steps light up in the order the code runs them ---- */
+  var flow = document.querySelector("[data-flow]");
+  if (flow && !reduce) (function () {
+    var li = flow.querySelectorAll("li");
+    onView(flow, function () {
+      var i = 0;
+      li[0].classList.add("on");
+      setInterval(function () { li[i].classList.remove("on"); i = (i + 1) % li.length; li[i].classList.add("on"); }, 1800);
+    }, 0.3);
+  })();
+
+  /* ---- trade steps light up one by one ---- */
+  var steps = document.querySelector("[data-steps]");
+  if (steps) (function () {
+    var li = steps.querySelectorAll("li");
+    if (reduce) { li.forEach(function (l) { l.classList.add("lit"); }); return; }
+    onView(steps, function () { li.forEach(function (l, i) { setTimeout(function () { l.classList.add("lit"); }, 300 + i * 600); }); }, 0.4);
+  })();
+})();
+</script>
+
+</body>
+</html>
